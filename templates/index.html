@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Placement Predictor</title>
+<style>
+  :root{
+    --bg:#0b1020; --bg2:#121936; --card:rgba(255,255,255,.06); --border:rgba(255,255,255,.12);
+    --text:#e8ecff; --muted:#9aa4d1; --accent:#6c7bff; --accent2:#22d3ee;
+    --ok:#22c55e; --bad:#f43f5e; --input:rgba(255,255,255,.07); --shadow:0 20px 60px rgba(0,0,0,.45);
+  }
+  [data-theme="light"]{
+    --bg:#eef1ff; --bg2:#dfe5ff; --card:rgba(255,255,255,.85); --border:rgba(40,50,120,.15);
+    --text:#14183a; --muted:#5b6392; --input:#fff; --shadow:0 20px 50px rgba(60,70,160,.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);min-height:100vh;
+    background:radial-gradient(1000px 600px at 10% -10%,var(--bg2),transparent),
+               radial-gradient(800px 500px at 100% 10%,rgba(34,211,238,.12),transparent),var(--bg);
+    padding:28px 16px 60px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:26px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:22px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 8px 24px rgba(108,123,255,.4)}
+  h1{font-size:1.45rem;letter-spacing:-.02em}
+  .sub{color:var(--muted);font-size:.88rem;margin-top:2px}
+  .tools{display:flex;align-items:center;gap:10px}
+  .pill{display:flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid var(--border);border-radius:999px;
+    background:var(--card);font-size:.8rem;color:var(--muted)}
+  .dot{width:9px;height:9px;border-radius:50%;background:#888}
+  .dot.on{background:var(--ok);box-shadow:0 0 0 4px rgba(34,197,94,.2)}
+  .dot.off{background:var(--bad);box-shadow:0 0 0 4px rgba(244,63,94,.2)}
+  button{font:inherit;cursor:pointer}
+  .icon-btn{border:1px solid var(--border);background:var(--card);color:var(--text);width:38px;height:38px;border-radius:50%;font-size:1rem}
+  .grid{display:grid;grid-template-columns:1.5fr 1fr;gap:22px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;box-shadow:var(--shadow);backdrop-filter:blur(14px)}
+  .card h2{font-size:1.05rem;margin-bottom:4px}
+  .card .hint{color:var(--muted);font-size:.84rem;margin-bottom:18px}
+  .section-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:var(--accent2);margin:18px 0 10px;font-weight:700}
+  .fields{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
+  @media(max-width:600px){.fields{grid-template-columns:1fr}}
+  .field label{display:flex;justify-content:space-between;font-size:.82rem;color:var(--muted);margin-bottom:6px}
+  .field label b{color:var(--text);font-variant-numeric:tabular-nums}
+  select,input[type=number]{
+    width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--border);background:var(--input);
+    color:var(--text);font:inherit;outline:none;transition:.2s;
+  }
+  select option{color:#111}
+  select:focus,input[type=number]:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,123,255,.25)}
+  input[type=range]{width:100%;margin-top:8px;accent-color:var(--accent)}
+  .row{display:grid;grid-template-columns:1fr 84px;gap:10px;align-items:center}
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--input);padding:4px;border-radius:12px;border:1px solid var(--border)}
+  .seg input{display:none}
+  .seg label{margin:0;text-align:center;padding:8px;border-radius:9px;cursor:pointer;color:var(--muted);transition:.2s;justify-content:center}
+  .seg input:checked+label{background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;box-shadow:0 6px 16px rgba(108,123,255,.4)}
+  .actions{display:flex;gap:10px;margin-top:24px;flex-wrap:wrap}
+  .btn{padding:13px 22px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text);font-weight:600;transition:.2s}
+  .btn:hover{transform:translateY(-1px)}
+  .btn.primary{flex:1;min-width:180px;border:none;color:#fff;background:linear-gradient(135deg,var(--accent),#8b5cf6);box-shadow:0 10px 26px rgba(108,123,255,.45)}
+  .btn.primary:disabled{opacity:.6;cursor:wait;transform:none}
+  .side{display:flex;flex-direction:column;gap:22px}
+  .result{text-align:center;padding:26px 18px;min-height:230px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px}
+  .result .ring{width:92px;height:92px;border-radius:50%;display:grid;place-items:center;font-size:2.4rem;border:2px dashed var(--border);color:var(--muted)}
+  .result.ok .ring{background:rgba(34,197,94,.15);border:2px solid var(--ok);color:var(--ok);animation:pop .5s}
+  .result.bad .ring{background:rgba(244,63,94,.15);border:2px solid var(--bad);color:var(--bad);animation:pop .5s}
+  .result h3{font-size:1.5rem}
+  .result.ok h3{color:var(--ok)} .result.bad h3{color:var(--bad)}
+  .result p{color:var(--muted);font-size:.9rem;max-width:300px;line-height:1.5}
+  @keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+  .spin{width:38px;height:38px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:rot .8s linear infinite}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  .history{list-style:none;display:flex;flex-direction:column;gap:8px;max-height:230px;overflow:auto}
+  .history li{display:flex;justify-content:space-between;align-items:center;font-size:.84rem;padding:9px 12px;border-radius:10px;background:var(--input);border:1px solid var(--border)}
+  .tag{padding:3px 10px;border-radius:999px;font-size:.74rem;font-weight:700}
+  .tag.ok{background:rgba(34,197,94,.18);color:var(--ok)} .tag.bad{background:rgba(244,63,94,.18);color:var(--bad)}
+  .empty{color:var(--muted);font-size:.85rem;text-align:center;padding:12px}
+  .error{margin-top:14px;padding:11px 14px;border-radius:12px;background:rgba(244,63,94,.12);border:1px solid var(--bad);color:var(--bad);font-size:.86rem;display:none}
+  details{margin-top:16px;font-size:.84rem;color:var(--muted)}
+  summary{cursor:pointer;margin-bottom:8px}
+  .api-row{display:flex;gap:8px}
+  .api-row input{flex:1;padding:9px 11px;border-radius:10px;border:1px solid var(--border);background:var(--input);color:var(--text);font:inherit}
+  footer{text-align:center;color:var(--muted);font-size:.78rem;margin-top:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">🎓</div>
+      <div>
+        <h1>Student Placement Predictor</h1>
+        <div class="sub">Decision Tree model · FastAPI backend</div>
+      </div>
+    </div>
+    <div class="tools">
+      <div class="pill"><span class="dot" id="statusDot"></span><span id="statusText">Checking API…</span></div>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme">🌙</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <form class="card" id="form" autocomplete="off">
+      <h2>Student details</h2>
+      <p class="hint">Fill in the profile and the model will predict the placement outcome.</p>
+
+      <div class="section-title">Profile</div>
+      <div class="fields">
+        <div class="field">
+          <label>Gender</label>
+          <div class="seg">
+            <input type="radio" name="gender" id="g1" value="male" checked><label for="g1">Male</label>
+            <input type="radio" name="gender" id="g2" value="female"><label for="g2">Female</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>Extracurricular activities</label>
+          <div class="seg">
+            <input type="radio" name="extracurricular" id="e1" value="yes" checked><label for="e1">Yes</label>
+            <input type="radio" name="extracurricular" id="e2" value="no"><label for="e2">No</label>
+          </div>
+        </div>
+        <div class="field" style="grid-column:1/-1">
+          <label for="branch">Branch</label>
+          <select id="branch" name="branch">
+            <option>CSE</option><option>IT</option><option>ECE</option>
+            <option>MECHANICAL</option><option>CIVIL</option><option>COMMERCE</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-title">Daily habits</div>
+      <div class="fields" id="habits"></div>
+
+      <div class="section-title">Academic performance</div>
+      <div class="fields" id="academics"></div>
+
+      <div class="error" id="error"></div>
+
+      <div class="actions">
+        <button type="submit" class="btn primary" id="submitBtn">Predict placement</button>
+        <button type="button" class="btn" id="sampleBtn">Sample</button>
+        <button type="button" class="btn" id="resetBtn">Reset</button>
+      </div>
+
+      <details>
+        <summary>API settings</summary>
+        <div class="api-row">
+          <input id="apiUrl" placeholder="http://127.0.0.1:8000">
+          <button type="button" class="btn" id="saveApi">Save</button>
+        </div>
+        <p style="margin-top:6px">Leave empty to use the same origin as this page.</p>
+      </details>
+    </form>
+
+    <div class="side">
+      <div class="card result" id="result">
+        <div class="ring">?</div>
+        <h3>No prediction yet</h3>
+        <p>Submit the form to see whether the student is likely to be placed.</p>
+      </div>
+      <div class="card">
+        <h2>Recent predictions</h2>
+        <p class="hint">Stored in this browser only.</p>
+        <ul class="history" id="history"></ul>
+      </div>
+    </div>
+  </div>
+
+  <footer>Built for the Decision Tree placement project · Predictions are indicative, not guaranteed.</footer>
+</div>
+
+<script>
+const FIELDS = {
+  habits: [
+    {id:'study_hours', label:'Study hours / day', min:0, max:12, step:0.1, def:3.5, unit:'h'},
+    {id:'sleep_hours', label:'Sleep hours / day', min:3, max:12, step:0.1, def:6.8, unit:'h'},
+    {id:'internet_usage', label:'Internet usage / day', min:0, max:12, step:0.1, def:4.5, unit:'h'},
+  ],
+  academics: [
+    {id:'attendance', label:'Attendance', min:0, max:100, step:0.1, def:75, unit:'%'},
+    {id:'assignments_completed', label:'Assignments completed', min:0, max:20, step:1, def:13, unit:''},
+    {id:'previous_score', label:'Previous score', min:0, max:100, step:0.1, def:62, unit:''},
+    {id:'exam_score', label:'Exam score', min:0, max:100, step:0.1, def:60, unit:''},
+  ]
+};
+const SAMPLES = [
+  {gender:'male',extracurricular:'yes',branch:'CSE',study_hours:5,sleep_hours:7,internet_usage:3,attendance:88,assignments_completed:18,previous_score:78,exam_score:80},
+  {gender:'female',extracurricular:'no',branch:'CIVIL',study_hours:1.2,sleep_hours:6,internet_usage:7,attendance:55,assignments_completed:5,previous_score:45,exam_score:42}
+];
+const $ = id => document.getElementById(id);
+const nums = [...FIELDS.habits, ...FIELDS.academics];
+
+function build(containerId, list){
+  $(containerId).innerHTML = list.map(f => `
+    <div class="field">
+      <label for="${f.id}_n">${f.label}<b id="${f.id}_v">${f.def}${f.unit}</b></label>
+      <div class="row">
+        <input type="range" id="${f.id}_r" min="${f.min}" max="${f.max}" step="${f.step}" value="${f.def}">
+        <input type="number" id="${f.id}_n" min="${f.min}" max="${f.max}" step="${f.step}" value="${f.def}">
+      </div>
+    </div>`).join('');
+}
+build('habits', FIELDS.habits); build('academics', FIELDS.academics);
+
+function setVal(f, v){
+  v = Math.min(f.max, Math.max(f.min, Number(v)));
+  if (isNaN(v)) v = f.def;
+  $(f.id+'_r').value = v; $(f.id+'_n').value = v; $(f.id+'_v').textContent = v + f.unit;
+}
+nums.forEach(f => {
+  $(f.id+'_r').addEventListener('input', e => setVal(f, e.target.value));
+  $(f.id+'_n').addEventListener('input', e => { if(e.target.value!=='') setVal(f, e.target.value); });
+});
+
+function fill(d){
+  document.querySelector(`[name=gender][value=${d.gender}]`).checked = true;
+  document.querySelector(`[name=extracurricular][value=${d.extracurricular}]`).checked = true;
+  $('branch').value = d.branch;
+  nums.forEach(f => setVal(f, d[f.id]));
+}
+$('sampleBtn').onclick = () => fill(SAMPLES[Math.floor(Math.random()*SAMPLES.length)]);
+$('resetBtn').onclick = () => {
+  fill({gender:'male',extracurricular:'yes',branch:'CSE',...Object.fromEntries(nums.map(f=>[f.id,f.def]))});
+  resetResult(); hideError();
+};
+
+// API base
+const apiBase = () => (localStorage.getItem('apiBase') || '').replace(/\/$/,'');
+$('apiUrl').value = localStorage.getItem('apiBase') || '';
+$('saveApi').onclick = () => { localStorage.setItem('apiBase', $('apiUrl').value.trim()); checkApi(); };
+
+async function checkApi(){
+  try{
+    const r = await fetch(apiBase()+'/', {cache:'no-store'});
+    if(!r.ok) throw 0;
+    $('statusDot').className='dot on'; $('statusText').textContent='API online';
+  }catch{
+    $('statusDot').className='dot off'; $('statusText').textContent='API offline';
+  }
+}
+checkApi();
+
+// Result
+function resetResult(){
+  const r = $('result'); r.className='card result';
+  r.innerHTML = '<div class="ring">?</div><h3>No prediction yet</h3><p>Submit the form to see whether the student is likely to be placed.</p>';
+}
+function showError(m){ const e=$('error'); e.textContent=m; e.style.display='block'; }
+function hideError(){ $('error').style.display='none'; }
+
+function showResult(label){
+  const ok = label === 'Placed';
+  const r = $('result'); r.className = 'card result ' + (ok ? 'ok' : 'bad');
+  r.innerHTML = `<div class="ring">${ok ? '✓' : '✕'}</div><h3>${label}</h3>
+    <p>${ok ? 'This profile looks strong. The student is likely to be placed.'
+            : 'This student may need extra support: mock interviews, practice tests and mentoring.'}</p>`;
+}
+
+// History
+function loadHistory(){ try{ return JSON.parse(localStorage.getItem('history')||'[]'); }catch{ return []; } }
+function renderHistory(){
+  const h = loadHistory();
+  $('history').innerHTML = h.length ? h.map(x => `
+    <li><span>${x.branch} · ${x.gender} · exam ${x.exam_score}</span>
+    <span class="tag ${x.prediction==='Placed'?'ok':'bad'}">${x.prediction}</span></li>`).join('')
+    : '<div class="empty">No predictions yet.</div>';
+}
+renderHistory();
+
+// Submit
+$('form').addEventListener('submit', async e => {
+  e.preventDefault(); hideError();
+  const payload = {
+    gender: document.querySelector('[name=gender]:checked').value,
+    extracurricular: document.querySelector('[name=extracurricular]:checked').value,
+    branch: $('branch').value
+  };
+  nums.forEach(f => payload[f.id] = parseFloat($(f.id+'_n').value));
+
+  const btn = $('submitBtn'); btn.disabled = true; btn.textContent = 'Predicting…';
+  $('result').className = 'card result'; $('result').innerHTML = '<div class="spin"></div><p>Running the model…</p>';
+  try{
+    const res = await fetch(apiBase()+'/predict', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error('Server returned ' + res.status);
+    const data = await res.json();
+    showResult(data.prediction);
+    const h = loadHistory(); h.unshift({...payload, prediction:data.prediction});
+    localStorage.setItem('history', JSON.stringify(h.slice(0,8))); renderHistory();
+    checkApi();
+  }catch(err){
+    resetResult();
+    showError('Could not reach the API. Make sure FastAPI is running and CORS is enabled. (' + err.message + ')');
+    checkApi();
+  }finally{
+    btn.disabled = false; btn.textContent = 'Predict placement';
+  }
+});
+
+// Theme
+const applyTheme = t => { document.documentElement.setAttribute('data-theme', t); $('themeBtn').textContent = t==='light'?'☀️':'🌙'; localStorage.setItem('theme', t); };
+applyTheme(localStorage.getItem('theme') || 'dark');
+$('themeBtn').onclick = () => applyTheme(document.documentElement.getAttribute('data-theme')==='light' ? 'dark' : 'light');
+</script>
+</body>
+</html>
